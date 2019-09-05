@@ -12,10 +12,10 @@ from tabs import *
 
 
 # set environment
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 with open("config.yaml") as f:
     configinfo = yaml.load(f, Loader=yaml.Loader)
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 
 # start dash

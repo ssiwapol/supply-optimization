@@ -286,9 +286,9 @@ class Optimize:
 
         # solve
         if configinfo['solver'][solve_engine] == "None":
-            s = SolverFactory(solve_engine, executable=configinfo['solver'][solve_engine])
-        else:
             s = SolverFactory(solve_engine)
+        else:
+            s = SolverFactory(solve_engine, executable=configinfo['solver'][solve_engine])
         results = s.solve(model)
 
         # result
@@ -339,7 +339,7 @@ class Optimize:
 
         # supply
         df_supply = df_combine.copy()
-        df_supply['supply_vol'] = df_supply['vol']
+        df_supply['supply_vol'] = df_supply['vol'].fillna(0)
         df_supply['supply_netcon'] = df_supply.apply(
             lambda x: x['supply_vol']*(x['sell_price']+x['var_cost']-x['trans_cost']), axis=1)
         df_supply = df_supply.groupby(['supply', 'supply_name', 'supply_lat', 'supply_long',
