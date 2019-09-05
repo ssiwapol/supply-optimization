@@ -1,6 +1,7 @@
 import io
 import datetime
 
+from pytz import timezone
 import numpy as np
 import pandas as pd
 import xlrd
@@ -117,7 +118,8 @@ class Optimize:
         # write sheet status to workbook
         sheet_status = mod.read_dict_from_worksheet(
             p.loadfile(configinfo['file']['input']), 'status', self.stream)
-        sheet_status['validate_datetime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet_status['validate_datetime'] = datetime.datetime.now(
+            timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
         mod.write_dict_to_worksheet(sheet_status, 'status', writer.book)
 
         # validate 1- check if all demand have supply chain param
@@ -171,7 +173,7 @@ class Optimize:
     def optimize(self, solve_engine='cbc'):
         # create status
         status = {}
-        start_time = datetime.datetime.now()
+        start_time = datetime.datetime.now(timezone('Asia/Bangkok'))
         status['optimize_start_time'] = start_time.strftime("%Y-%m-%d %H:%M:%S")
 
         # set index for df
@@ -295,7 +297,7 @@ class Optimize:
         status['optimize_solver_status'] = str(results['Solver'][0]['Status'])
         status['optimize_termination_condition'] = str(
             results['Solver'][0]['Termination condition'])
-        end_time = datetime.datetime.now()
+        end_time = datetime.datetime.now(timezone('Asia/Bangkok'))
         status['optimize_end_time'] = end_time.strftime("%Y-%m-%d %H:%M:%S")
         status['optimize_solvetime_sec'] = (end_time - start_time).total_seconds()
 
@@ -327,7 +329,8 @@ class Optimize:
         sheet_status = mod.read_dict_from_worksheet(
             p.loadfile(configinfo['file']['input']), 'status', self.stream)
         sheet_status.update(opt_status)
-        sheet_status['plot_datetime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet_status['plot_datetime'] = datetime.datetime.now(
+            timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
         mod.write_dict_to_worksheet(sheet_status, 'status', writer.book)
 
         df_combine = self.df_dict['output_combine'].copy()
@@ -388,7 +391,8 @@ class Optimize:
         sheet_status = mod.read_dict_from_worksheet(
             p.loadfile(configinfo['file']['input']), 'status', self.stream)
         sheet_status.update(opt_status)
-        sheet_status['output_datetime'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet_status['output_datetime'] = datetime.datetime.now(
+            timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
         mod.write_dict_to_worksheet(sheet_status, 'status', writer.book)
 
         # transportation

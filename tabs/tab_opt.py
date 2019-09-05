@@ -1,6 +1,7 @@
 import base64
 import datetime
 
+from pytz import timezone
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
@@ -90,7 +91,8 @@ def set_callbacks(app):
                   [State('upload-data', 'filename')])
     def start_optimize(content, filename):
         user = request.authorization['username']
-        upload_datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        upload_datetime = datetime.datetime.now(
+            timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
         opt = optimize.Optimize(user)
         # no file upload
         if filename is None:
