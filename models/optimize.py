@@ -408,7 +408,7 @@ class Optimize:
         df_supply['supply_netcon'] = df_supply.apply(
             lambda x: x['supply_vol'] * (x['sell_price']-x['var_cost']-x['trans_cost']), axis=1)
         df_supply = df_supply.groupby(['supply', 'supply_name', 'supply_cap',
-                                       'supply_min', 'supply_max', 'supply_min_vol', 'supply_max_vol'], as_index=False).agg({'supply_vol': 'sum', 'supply_netcon': 'sum', 'prod': 'count'}).rename(columns={'prod': 'supply_sku'})
+                                       'supply_min', 'supply_max', 'supply_min_vol', 'supply_max_vol'], as_index=False).agg({'supply_vol': 'sum', 'supply_netcon': 'sum', 'prod': 'nunique'}).rename(columns={'prod': 'supply_sku'})
         df_supply['supply_utilize'] = df_supply['supply_vol'] / df_supply['supply_cap']
         df_supply['supply_utilize'] = df_supply['supply_utilize'].fillna(0)
         df_supply['supply_netconperunit'] = df_supply['supply_netcon'] / df_supply['supply_vol']
