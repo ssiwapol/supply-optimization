@@ -285,7 +285,10 @@ class Optimize:
             sense=maximize)
 
         # solve
-        s = SolverFactory(solve_engine, executable=configinfo['solver'][solve_engine])
+        if configinfo['solver'][solve_engine] == "None":
+            s = SolverFactory(solve_engine, executable=configinfo['solver'][solve_engine])
+        else:
+            s = SolverFactory(solve_engine)
         results = s.solve(model)
 
         # result
