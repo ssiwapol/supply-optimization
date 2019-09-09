@@ -26,6 +26,24 @@ class PathFile:
     def configinfo(self):
         return self.config
 
+    def getuser(self):
+        filename = self.config['file']['user']
+        # load file from GCP
+        if self.config['app']['run'] == "gcp":
+            fullpath = '/'.join((self.config['path']['gcp']['path'], filename))
+            blob = storage.Blob(fullpath, self.gcpbucket)
+            byte_stream = io.BytesIO()
+            blob.download_to_file(byte_stream)
+            byte_stream.seek(0)
+            with byte_stream as f:
+                user = yaml.load(f, Loader=yaml.Loader)
+        # load file from local
+        else:
+            path = os.path.join(self.config['path']['local']['path'], filename)
+            with open(path) as f:
+                user = yaml.load(f, Loader=yaml.Loader)
+        return user
+
     def setuser(self, user):
         self.user = user
 

@@ -1,21 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
-import yaml
 import pyutilib.subprocess.GlobalData
 
 import dash
 import dash_auth
 import dash_core_components as dcc
 import dash_html_components as html
-from flask import Flask
 
 from tabs import *
+import mod
 
 
 # set environment
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
-with open("config.yaml") as f:
-    configinfo = yaml.load(f, Loader=yaml.Loader)
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 
@@ -23,7 +20,9 @@ pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 app = dash.Dash()
 server = app.server
 app.title = 'Supply Optimization'
-users = configinfo['user']
+p = mod.PathFile()
+configinfo = p.configinfo()
+users = p.getuser()
 valid_users = {i: j['password'] for i, j in users.items()}
 auth = dash_auth.BasicAuth(app, valid_users)
 
