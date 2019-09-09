@@ -7,6 +7,7 @@ import dash
 import dash_auth
 import dash_core_components as dcc
 import dash_html_components as html
+from flask import Flask
 
 from tabs import *
 
@@ -20,6 +21,7 @@ pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 # start dash
 app = dash.Dash()
+server = app.server
 app.title = 'Supply Optimization'
 users = configinfo['user']
 valid_users = {i: j['password'] for i, j in users.items()}
