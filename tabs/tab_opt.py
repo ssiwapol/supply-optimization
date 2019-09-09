@@ -55,7 +55,14 @@ validate_col = html.Div([
 solve_col = html.Div([
     html.H3('Solve ', style={'display': 'inline-block', 'padding-right': '15px'}),
     html.Button(id='solve', children='Solve'),
-    html.P(id='optimize-start', style={'margin-top': '0px'}),
+    dcc.RadioItems(
+        id='solver-engine',
+        options=[{'label': 'CBC', 'value': 'cbc'}, {'label': 'GLPK', 'value': 'glpk'}, ],
+        value='cbc',
+        labelStyle={'display': 'inline-block'},
+        style={'margin-top': '0px'}
+    ),
+    html.P(id='optimize-start'),
     html.P(id='optimize-end'),
     html.P(id='optimize-total'),
     html.P(id='optimize-status'),
@@ -164,8 +171,9 @@ def set_callbacks(app):
                    Output('optimize-status', 'children'),
                    Output('optimize-condition', 'children'),
                    Output('output', 'style'), ],
-                  [Input('solve', 'n_clicks')],)
-    def solve(click):
+                  [Input('solve', 'n_clicks'),
+                   Input('solver-engine', 'value')],)
+    def solve(click, solver_engine):
         user = request.authorization['username']
         if click is None:
             optimize_start_txt = ""
@@ -177,7 +185,7 @@ def set_callbacks(app):
         else:
             opt = optimize.Optimize(user)
             opt.import_data()
-            opt_status = opt.optimize(solve_engine=configinfo['app']['solver'])
+            opt_status = opt.optimize(solve_engine=solver_engine)
             opt.gen_output(opt_status)
             opt.gen_plot(opt_status)
             optimize_start_txt = opt_status['optimize_start_time']

@@ -294,6 +294,7 @@ class Optimize:
         results = s.solve(model)
 
         # result
+        status['optimize_solver_engine'] = solve_engine
         status['optimize_solver_status'] = str(results['Solver'][0]['Status'])
         status['optimize_termination_condition'] = str(
             results['Solver'][0]['Termination condition'])

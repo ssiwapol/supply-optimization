@@ -22,6 +22,7 @@ Validate
   - Validate5 - check logistics cap vs supply cap (by supply)
 
 Solve
+- Select solver engine (default is CBC)
 - Press solve button to solve the problem
 - Check solving status
   - Status refer to solver status ('ok' = complete)
