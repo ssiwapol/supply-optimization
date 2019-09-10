@@ -11,7 +11,6 @@ import mod
 
 # get config data
 p = mod.PathFile()
-configinfo = p.configinfo()
 
 # select supply
 refresh_btn = html.Div(children=[

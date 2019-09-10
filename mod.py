@@ -23,9 +23,6 @@ class PathFile:
             else:
                 pass
 
-    def configinfo(self):
-        return self.config
-
     def getuser(self):
         filename = self.config['file']['user']
         # load file from GCP

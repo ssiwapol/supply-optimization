@@ -11,7 +11,6 @@ from pyomo.opt import SolverFactory
 import mod
 
 p = mod.PathFile()
-configinfo = p.configinfo()
 
 sheet_dict = {'supply': ['supply', 'supply_name', 'supply_lat', 'supply_long'],
               'product': ['prod', 'prod_name'],
@@ -35,7 +34,7 @@ class Optimize:
     def __init__(self, user):
         self.user = user
         p.setuser(self.user)
-        self.stream = False if configinfo['app']['run'] == 'local' else True
+        self.stream = False if p.config['app']['run'] == 'local' else True
 
     def validate_sheet(self, decoded, upload_status):
         input_file = io.BytesIO()
@@ -66,7 +65,7 @@ class Optimize:
                 status[sheet]['error'] = 1
         writer.save()
         input_file.seek(0)
-        p.savefile(input_file, configinfo['file']['input'])
+        p.savefile(input_file, p.config['file']['input'])
         return status
 
     def import_data(self):
@@ -74,7 +73,7 @@ class Optimize:
         df_dict = {}
         for sheet in sheet_dict.keys():
             df = pd.read_excel(p.loadfile(
-                configinfo['file']['input']), dtype=str, sheet_name=sheet, index=False)
+                p.config['file']['input']), dtype=str, sheet_name=sheet, index=False)
             for col in [x for x in df.columns if x not in col_str]:
                 df[col] = df[col].apply(lambda x: mod.converttofloat(x))
             df_dict[sheet] = df.dropna(subset=[df.columns[0]])
@@ -117,7 +116,7 @@ class Optimize:
 
         # write sheet status to workbook
         sheet_status = mod.read_dict_from_worksheet(
-            p.loadfile(configinfo['file']['input']), 'status', self.stream)
+            p.loadfile(p.config['file']['input']), 'status', self.stream)
         sheet_status['validate_datetime'] = datetime.datetime.now(
             timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
         mod.write_dict_to_worksheet(sheet_status, 'status', writer.book)
@@ -166,7 +165,7 @@ class Optimize:
         # save file
         writer.save()
         error_file.seek(0)
-        p.savefile(error_file, configinfo['file']['error'])
+        p.savefile(error_file, p.config['file']['error'])
 
         return status
 
@@ -287,10 +286,10 @@ class Optimize:
             sense=maximize)
 
         # solve
-        if configinfo['solver'][solve_engine] == "None":
+        if p.config['solver'][solve_engine] == "None":
             s = SolverFactory(solve_engine)
         else:
-            s = SolverFactory(solve_engine, executable=configinfo['solver'][solve_engine])
+            s = SolverFactory(solve_engine, executable=p.config['solver'][solve_engine])
         results = s.solve(model)
 
         # result
@@ -328,7 +327,7 @@ class Optimize:
 
         # write sheet status to workbook
         sheet_status = mod.read_dict_from_worksheet(
-            p.loadfile(configinfo['file']['input']), 'status', self.stream)
+            p.loadfile(p.config['file']['input']), 'status', self.stream)
         sheet_status.update(opt_status)
         sheet_status['plot_datetime'] = datetime.datetime.now(
             timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
@@ -382,7 +381,7 @@ class Optimize:
 
         writer.save()
         plot_file.seek(0)
-        p.savefile(plot_file, configinfo['file']['plot'])
+        p.savefile(plot_file, p.config['file']['plot'])
 
     def gen_output(self, opt_status):
         output_file = io.BytesIO()
@@ -390,7 +389,7 @@ class Optimize:
 
         # write sheet status to workbook
         sheet_status = mod.read_dict_from_worksheet(
-            p.loadfile(configinfo['file']['input']), 'status', self.stream)
+            p.loadfile(p.config['file']['input']), 'status', self.stream)
         sheet_status.update(opt_status)
         sheet_status['output_datetime'] = datetime.datetime.now(
             timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
@@ -445,4 +444,4 @@ class Optimize:
 
         writer.save()
         output_file.seek(0)
-        p.savefile(output_file, configinfo['file']['output'])
+        p.savefile(output_file, p.config['file']['output'])

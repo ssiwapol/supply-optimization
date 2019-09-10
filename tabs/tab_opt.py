@@ -12,7 +12,6 @@ import mod
 
 # get config data
 p = mod.PathFile()
-configinfo = p.configinfo()
 
 # dash components
 upload_btn = dcc.Upload(

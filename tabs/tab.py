@@ -4,8 +4,8 @@ from flask import request, send_file
 
 import mod
 
+# get config data
 p = mod.PathFile()
-configinfo = p.configinfo()
 
 
 def set_callbacks(app):
@@ -16,7 +16,7 @@ def set_callbacks(app):
             filename = "input_template.xlsx"
             pathfile = os.path.join("./models", filename)
         else:
-            filename = configinfo['file'][file]
+            filename = p.config['file'][file]
             pathfile = p.loadfile(filename)
         return send_file(pathfile,
                          attachment_filename=filename,

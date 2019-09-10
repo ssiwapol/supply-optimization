@@ -7,16 +7,15 @@ from plotly.subplots import make_subplots
 import mod
 
 p = mod.PathFile()
-configinfo = p.configinfo()
 
 
 class Visualize:
     def __init__(self, user):
         self.user = user
         p.setuser(self.user)
-        self.stream = False if configinfo['app']['run'] == 'local' else True
+        self.stream = False if p.config['app']['run'] == 'local' else True
         try:
-            self.file = p.loadfile(configinfo['file']['plot'])
+            self.file = p.loadfile(p.config['file']['plot'])
             self.plot_status = mod.read_dict_from_worksheet(self.file, 'status', self.stream)
             self.df_route = pd.read_excel(self.file, sheet_name='route')
             self.df_supply = pd.read_excel(self.file, sheet_name='supply')

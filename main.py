@@ -21,7 +21,6 @@ app = dash.Dash()
 server = app.server
 app.title = 'Supply Optimization'
 p = mod.PathFile()
-configinfo = p.configinfo()
 users = p.getuser()
 valid_users = {i: j['password'] for i, j in users.items()}
 auth = dash_auth.BasicAuth(app, valid_users)
@@ -41,4 +40,4 @@ tab_viz.set_callbacks(app)
 
 
 if __name__ == '__main__':
-    app.run_server(debug=configinfo['app']['debug'], host='0.0.0.0', port=8080)
+    app.run_server(debug=p.config['app']['debug'], host='0.0.0.0', port=8080)
