@@ -272,7 +272,7 @@ class Optimize:
         model.c6 = ConstraintList(doc='c_demand')
         for j, m in set((x[jj], x[mm]) for x in model.id_trans):
             model.c6.add(sum([model.trans_vol[x] for x in model.trans_vol if x[jj]
-                              == j and x[mm] == m]) <= model.demand_vol[(j, m)])
+                              == j and x[mm] == m]) == model.demand_vol[(j, m)])
         model.c7 = ConstraintList(doc='c_wh_decision')
         max_vol = sum([model.demand_vol[x].value for x in model.demand_vol])
         for l in list(model.id_wh):
