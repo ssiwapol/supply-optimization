@@ -4,3 +4,4 @@ models/__pycache__
 tabs/__pycache__
 env/
 *.yaml
+.vscode/

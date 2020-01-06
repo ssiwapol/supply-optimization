@@ -135,7 +135,7 @@ def set_callbacks(app):
             decoded = base64.b64decode(content_string)
             validate_sheet_status = opt.validate_sheet(decoded, upload_status)
             if sum([x['error'] for x in validate_sheet_status.values()]) > 0:
-                validate_sheet_error = [(i, {'column': v['column'], 'duplicate': v['duplicate']})
+                validate_sheet_error = [(i, {'column': v['column'], 'master': v['master'], 'duplicate': v['duplicate']})
                                         for i, v in validate_sheet_status.items() if validate_sheet_status[i]['error'] > 0]
                 validate_sheet_txt = str(validate_sheet_error)
                 validate_feas_txt = ""

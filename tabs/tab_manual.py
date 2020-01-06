@@ -13,6 +13,7 @@ Upload
 Validate
 - Sheet validation
   - Columns - check complete columns in upload file for all sheets
+  - Master - check master column values are in master sheet
   - Duplicate - check there is duplicate value of master columns for all sheets
 - Feasible validation
   - Validate1 - check if all demand have supply chain parameters

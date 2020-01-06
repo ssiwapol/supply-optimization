@@ -10,11 +10,11 @@ p = mod.PathFile()
 
 def set_callbacks(app):
     @app.server.route('/download/<file>')
-    def download_output(file):
+    def download_file(file):
         p.setuser(request.authorization['username'])
         if file == "input_template":
             filename = "input_template.xlsx"
-            pathfile = os.path.join("./models", filename)
+            pathfile = os.path.join(os.getcwd(), "models", filename)
         else:
             filename = p.config['file'][file]
             pathfile = p.loadfile(filename)
