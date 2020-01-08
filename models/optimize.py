@@ -5,7 +5,7 @@ from pytz import timezone
 import numpy as np
 import pandas as pd
 import xlrd
-from pyomo.environ import *
+import pyomo.environ as pyomo
 from pyomo.opt import SolverFactory
 
 import mod
@@ -43,6 +43,7 @@ class Optimize:
         input_file = io.BytesIO()
         writer = pd.ExcelWriter(input_file, engine='xlsxwriter')
         mod.write_dict_to_worksheet(upload_status, 'status', writer.book)
+        # get all master data
         master_list = {}
         for sheet in sheet_master:
             try:
@@ -51,18 +52,23 @@ class Optimize:
             except Exception:
                 master_list[sheet_master[sheet]] = None
         col_master = [v for v in sheet_master.values()]
+        # validate sheet
         status = {}
         for sheet in list(sheet_dict.keys()):
             try:
+                # import all columns as string and convert to float in specific column
                 df = pd.read_excel(io.BytesIO(decoded), sheet_name=sheet, dtype=str).dropna(subset=[sheet_dict[sheet][0]])
                 for col in [x for x in df.columns if x not in col_str]:
                     df[col] = df[col].apply(lambda x: mod.converttofloat(x))
                 df = df[[x for x in sheet_dict[sheet] if x in list(df.columns)]].reset_index(drop=True)
+                # check if columns have duplicate value prior to primary key
                 df_duplicate = df.groupby([x for x in col_master if x in df.columns], as_index=False).size().reset_index(name='cnt')
                 df_duplicate = df_duplicate[df_duplicate['cnt'] > 1]
+                # check if primary key have data in master sheet
                 master_error = {}
                 for col in [x for x in master_list if x in df.columns]:
                     master_error[col] = 0 if set(df[col].unique()) <= set(master_list[col]) else 1
+                # summarize status
                 status[sheet] = {}
                 status[sheet]['column'] = 0 if set(list(df.columns)) >= set(sheet_dict[sheet]) else 1
                 status[sheet]['master'] = 0 if sum([x for x in master_error.values()]) <= 0 else 1
@@ -199,98 +205,73 @@ class Optimize:
         demand_vol = dict(zip(df_demand_param.index, df_demand_param.demand_vol))
 
         # model
-        model = ConcreteModel()
+        model = pyomo.ConcreteModel()
 
         # define sets
-        model.i = Set(initialize=list(df_supply.index), doc='i_supply')
-        model.j = Set(initialize=list(df_prod.index), doc='i_product')
-        model.k = Set(initialize=list(df_route.index), doc='i_route')
-        model.l = Set(initialize=list(df_wh.index), doc='i_warehouse')
-        model.m = Set(initialize=list(df_dest.index), doc='i_destination')
-        model.id_trans = Set(initialize=list(df_supplychain_param.index), doc='i_transportation')
-        model.id_wh = Set(initialize=set(x[3] for x in df_supplychain_param.index), doc='i_warehouse_decision')
+        model.I = pyomo.Set(initialize=list(df_supply.index), doc='i_supply')
+        model.J = pyomo.Set(initialize=list(df_prod.index), doc='i_product')
+        model.K = pyomo.Set(initialize=list(df_route.index), doc='i_route')
+        model.L = pyomo.Set(initialize=list(df_wh.index), doc='i_warehouse')
+        model.M = pyomo.Set(initialize=list(df_dest.index), doc='i_destination')
+        model.ID_TRANS = pyomo.Set(initialize=list(df_supplychain_param.index), doc='i_transportation')
+        model.ID_WH = pyomo.Set(initialize=set(x[3] for x in df_supplychain_param.index), doc='i_warehouse_decision')
 
         # set parameters
-        model.supply_min = Param(model.i, initialize=supply_min_vol,
-                                 default=0, mutable=True, doc='p_supply_min')
-        model.supply_max = Param(model.i, initialize=supply_max_vol,
-                                 default=0, mutable=True, doc='p_supply_max')
-        model.supplyprod_cap = Param(model.i, model.j, initialize=supplyprod_cap,
-                                     default=10000000, mutable=True, doc='p_supplyprod_cap')
-        model.wh_min = Param(model.l, initialize=wh_min_vol, 
-                            default=0, mutable=True, doc='p_warehouse_min')
-        model.wh_max = Param(model.l, initialize=wh_max_vol,
-                                default=1000000000, mutable=True, doc='p_warehouse_max')
-        model.logis_min = Param(model.i, model.k, model.l, model.m,
-                                initialize=logis_min_vol, default=0, mutable=True, doc='p_logistics_min')
-        model.logis_max = Param(model.i, model.k, model.l, model.m, 
-                                initialize=logis_max_vol, default=1000000000, mutable=True, doc='p_logistics_max')
-        model.sell_price = Param(model.i, model.j, model.k, model.l, model.m,
-                                 initialize=sell_price, default=0, mutable=True, doc='p_supplychain_selling_price')
-        model.var_cost = Param(model.i, model.j, model.k, model.l, model.m,
-                               initialize=var_cost, default=1000000000, mutable=True, doc='p_supplychain_vc')
-        model.trans_cost = Param(model.i, model.j, model.k, model.l, model.m, initialize=trans_cost,
-                                 default=1000000000, mutable=True, doc='p_supplychain_transportation_cost')
-        model.wh_fc = Param(model.l, initialize=wh_fc, default=1000000000, 
-                            mutable=True, doc='p_warehoues_fc')
-        model.demand_vol = Param(model.j, model.m, initialize=demand_vol,
-                                 default=0, mutable=True, doc='p_demand_value')
+        model.supply_min = pyomo.Param(model.I, initialize=supply_min_vol, default=0, mutable=True, doc='p_supply_min')
+        model.supply_max = pyomo.Param(model.I, initialize=supply_max_vol, default=0, mutable=True, doc='p_supply_max')
+        model.supplyprod_cap = pyomo.Param(model.I, model.J, initialize=supplyprod_cap, default=10000000, mutable=True, doc='p_supplyprod_cap')
+        model.logis_min = pyomo.Param(model.I, model.K, model.L, model.M, initialize=logis_min_vol, default=0, mutable=True, doc='p_logistics_min')
+        model.logis_max = pyomo.Param(model.I, model.K, model.L, model.M, initialize=logis_max_vol, default=1000000000, mutable=True, doc='p_logistics_max')
+        model.sell_price = pyomo.Param(model.I, model.J, model.K, model.L, model.M, initialize=sell_price, default=0, mutable=True, doc='p_supplychain_selling_price')
+        model.var_cost = pyomo.Param(model.I, model.J, model.K, model.L, model.M, initialize=var_cost, default=1000000000, mutable=True, doc='p_supplychain_vc')
+        model.trans_cost = pyomo.Param(model.I, model.J, model.K, model.L, model.M, initialize=trans_cost, default=1000000000, mutable=True, doc='p_supplychain_transportation_cost')
+        model.wh_fc = pyomo.Param(model.L, initialize=wh_fc, default=1000000000, mutable=True, doc='p_warehoues_fc')
+        model.wh_min = pyomo.Param(model.L, initialize=wh_min_vol, default=0, mutable=True, doc='p_warehouse_min')
+        model.wh_max = pyomo.Param(model.L, initialize=wh_max_vol, default=1000000000, mutable=True, doc='p_warehouse_max')
+        model.demand_vol = pyomo.Param(model.J, model.M, initialize=demand_vol, default=0, mutable=True, doc='p_demand_value')
 
         # create decision variables
-        model.trans_vol = Var(model.id_trans, domain=NonNegativeReals,
-                              bounds=(0, None), doc='v_transportation_volume')
-        model.wh_decision = Var(model.id_wh, domain=Integers,
-                                bounds=(0, 1), doc='v_warehouse_decision')
+        model.trans_vol = pyomo.Var(model.ID_TRANS, domain=pyomo.NonNegativeReals, bounds=(0, None), doc='v_transportation_volume')
+        model.wh_decision = pyomo.Var(model.ID_WH, domain=pyomo.Integers, bounds=(0, 1), doc='v_warehouse_decision')
 
         # constraints
-        ii = 0
-        jj = 1
-        kk = 2
-        ll = 3
-        mm = 4
-        model.c1 = ConstraintList(doc='c_supply_min')
-        for i in set(x[ii] for x in model.id_trans):
-            model.c1.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ii] == i]) 
-                         >= model.supply_min[i])
-        model.c2 = ConstraintList(doc='c_supply_max')
-        for i in set(x[ii] for x in model.id_trans):
-            model.c2.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ii] == i]) 
-                         <= model.supply_max[i])
-        model.c3 = ConstraintList(doc='c_supplyproduct_cap')
-        for i, j in set((x[ii], x[jj]) for x in model.id_trans):
-            model.c3.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ii] == i and x[jj] == j]) 
-                         <= model.supplyprod_cap[(i, j)])
-        model.c4 = ConstraintList(doc='c_logistics_min')
-        for i, k, l, m in set((x[ii], x[kk], x[ll], x[mm]) for x in model.id_trans):
-            model.c4.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ii] == i and x[kk] == k and x[ll] == l and x[mm] == m]) 
-                         >= model.logis_min[(i, k, l, m)])
-        model.c5 = ConstraintList(doc='c_logistics_max')
-        for i, k, l, m in set((x[ii], x[kk], x[ll], x[mm]) for x in model.id_trans):
-            model.c5.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ii] == i and x[kk] == k and x[ll] == l and x[mm] == m]) 
-                         <= model.logis_max[(i, k, l, m)])
-        model.c6 = ConstraintList(doc='c_demand')
-        for j, m in set((x[jj], x[mm]) for x in model.id_trans):
-            model.c6.add(sum([model.trans_vol[x] for x in model.trans_vol if x[jj] == j and x[mm] == m]) 
+        model.c = pyomo.ConstraintList(doc='constraints')
+        idr = {k: v for k, v in zip(['i', 'j', 'k', 'l', 'm'], range(5))}
+        # supply min/max
+        for i in set(x[idr['i']] for x in model.ID_TRANS):
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['i']] == i]) 
+                        >= model.supply_min[i])
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['i']] == i]) 
+                        <= model.supply_max[i])
+        # supply product cap
+        for i, j in set((x[idr['i']], x[idr['j']]) for x in model.ID_TRANS):
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['i']] == i and x[idr['j']] == j]) 
+                        <= model.supplyprod_cap[(i, j)])
+        # logistics min/max
+        for i, k, l, m in set((x[idr['i']], x[idr['k']], x[idr['l']], x[idr['m']]) for x in model.ID_TRANS):
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['i']] == i and x[idr['k']] == k and x[idr['l']] == l and x[idr['m']] == m]) 
+                        >= model.logis_min[(i, k, l, m)])
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['i']] == i and x[idr['k']] == k and x[idr['l']] == l and x[idr['m']] == m]) 
+                        <= model.logis_max[(i, k, l, m)])
+        # demand
+        for j, m in set((x[idr['j']], x[idr['m']]) for x in model.ID_TRANS):
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['j']] == j and x[idr['m']] == m]) 
                          == model.demand_vol[(j, m)])
-        model.c7 = ConstraintList(doc='c_wh_decision')
+        # warehouse decision, min/max
         max_vol = sum([model.demand_vol[x].value for x in model.demand_vol])
-        for l in list(model.id_wh):
-            model.c7.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ll] == l]) 
+        for l in set(x[idr['l']] for x in model.ID_TRANS):
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['l']] == l]) 
                          <= max_vol * model.wh_decision[l])
-        model.c8 = ConstraintList(doc='c_warehouse_min')
-        for l in set(x[ll] for x in model.id_trans):
-            model.c8.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ll] == l]) 
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['l']] == l]) 
                          >= model.wh_min[l])
-        model.c9 = ConstraintList(doc='c_warehouse_max')
-        for l in set(x[ll] for x in model.id_trans):
-            model.c9.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ll] == l]) 
+            model.c.add(sum([model.trans_vol[x] for x in model.trans_vol if x[idr['l']] == l]) 
                          <= model.wh_max[l])
 
         # objective Function
-        model.objective = Objective(
+        model.objective = pyomo.Objective(
             expr=sum((model.trans_vol[(i, j, k, l, m)]*(model.sell_price[(i, j, k, l, m)]-model.var_cost[(i, j, k, l, m)]-model.trans_cost[(i, j, k, l, m)]))
-                     for i, j, k, l, m in list(model.trans_vol)) - sum((model.wh_decision[l]*model.wh_fc[l]) for l in set(x[ll] for x in model.trans_vol)),
-            sense=maximize)
+                     for i, j, k, l, m in list(model.trans_vol)) - sum((model.wh_decision[l]*model.wh_fc[l]) for l in set(x[idr['l']] for x in model.trans_vol)),
+            sense=pyomo.maximize)
 
         # solve
         if p.config['solver'][solve_engine] == "None":
