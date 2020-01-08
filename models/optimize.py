@@ -21,7 +21,7 @@ sheet_dict = {'supply': ['supply', 'supply_name', 'supply_lat', 'supply_long'],
               'supplyproduct_param': ['supply', 'prod', 'supplyprod_cap'],
               'logistics_param': ['supply', 'route', 'wh', 'dest', 'logis_cap', 'logis_min', 'logis_max'],
               'supplychain_param': ['supply', 'prod', 'route', 'wh', 'dest', 'sell_price', 'var_cost', 'trans_cost'],
-              'warehouse_param': ['wh', 'wh_fc'],
+              'warehouse_param': ['wh', 'wh_fc', 'wh_min_vol', 'wh_max_vol'],
               'demand_param': ['prod', 'dest', 'demand_vol']}
 sheet_master = {'supply': 'supply',
               'product': 'prod',
@@ -188,6 +188,8 @@ class Optimize:
         supply_min_vol = dict(zip(df_supply_param.index, df_supply_param.supply_min_vol))
         supply_max_vol = dict(zip(df_supply_param.index, df_supply_param.supply_max_vol))
         supplyprod_cap = dict(zip(df_supplyprod_param.index, df_supplyprod_param.supplyprod_cap))
+        wh_min_vol = dict(zip(df_wh_param.index, df_wh_param.wh_min_vol))
+        wh_max_vol = dict(zip(df_wh_param.index, df_wh_param.wh_max_vol))
         logis_min_vol = dict(zip(df_logis_param.index, df_logis_param.logis_min_vol))
         logis_max_vol = dict(zip(df_logis_param.index, df_logis_param.logis_max_vol))
         sell_price = dict(zip(df_supplychain_param.index, df_supplychain_param.sell_price))
@@ -215,10 +217,14 @@ class Optimize:
                                  default=0, mutable=True, doc='p_supply_max')
         model.supplyprod_cap = Param(model.i, model.j, initialize=supplyprod_cap,
                                      default=10000000, mutable=True, doc='p_supplyprod_cap')
+        model.wh_min = Param(model.l, initialize=wh_min_vol, 
+                            default=0, mutable=True, doc='p_warehouse_min')
+        model.wh_max = Param(model.l, initialize=wh_max_vol,
+                                default=1000000000, mutable=True, doc='p_warehouse_max')
         model.logis_min = Param(model.i, model.k, model.l, model.m,
                                 initialize=logis_min_vol, default=0, mutable=True, doc='p_logistics_min')
-        model.logis_max = Param(model.i, model.k, model.l, model.m, initialize=logis_max_vol,
-                                default=1000000000, mutable=True, doc='p_logistics_max')
+        model.logis_max = Param(model.i, model.k, model.l, model.m, 
+                                initialize=logis_max_vol, default=1000000000, mutable=True, doc='p_logistics_max')
         model.sell_price = Param(model.i, model.j, model.k, model.l, model.m,
                                  initialize=sell_price, default=0, mutable=True, doc='p_supplychain_selling_price')
         model.var_cost = Param(model.i, model.j, model.k, model.l, model.m,
@@ -271,6 +277,14 @@ class Optimize:
         for l in list(model.id_wh):
             model.c7.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ll] == l]) 
                          <= max_vol * model.wh_decision[l])
+        model.c8 = ConstraintList(doc='c_warehouse_min')
+        for l in set(x[ll] for x in model.id_trans):
+            model.c8.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ll] == l]) 
+                         >= model.wh_min[l])
+        model.c9 = ConstraintList(doc='c_warehouse_max')
+        for l in set(x[ll] for x in model.id_trans):
+            model.c9.add(sum([model.trans_vol[x] for x in model.trans_vol if x[ll] == l]) 
+                         <= model.wh_max[l])
 
         # objective Function
         model.objective = Objective(
@@ -342,7 +356,7 @@ class Optimize:
 
         # warehouse
         df_wh = df_combine.copy()
-        df_wh = df_wh.groupby(['wh', 'wh_name', 'wh_fc'], as_index=False).agg({'vol': 'sum'}).rename(columns={'vol': 'wh_vol'})
+        df_wh = df_wh.groupby(['wh', 'wh_name', 'wh_fc', 'wh_min_vol', 'wh_max_vol'], as_index=False).agg({'vol': 'sum'}).rename(columns={'vol': 'wh_vol'})
         df_wh['wh_fc_val'] = df_wh.apply(lambda x: x['wh_fc'] if x['wh_vol'] > 0 else 0, axis=1)
         df_wh.to_excel(writer, sheet_name='warehouse', index=False)
 
@@ -415,7 +429,7 @@ class Optimize:
         df_wh = pd.merge(a, b, on='wh', how='left')
         df_wh = pd.merge(df_wh, c, on='wh', how='left')
         df_wh['wh_vol'] = df_wh['vol'].fillna(0)
-        df_wh = df_wh.groupby(['wh', 'wh_name', 'wh_fc'], as_index=False).agg({'wh_vol': 'sum'})
+        df_wh = df_wh.groupby(['wh', 'wh_name', 'wh_fc', 'wh_min_vol', 'wh_max_vol'], as_index=False).agg({'wh_vol': 'sum'})
         df_wh['wh_fc_val'] = df_wh.apply(lambda x: x['wh_fc'] if x['wh_vol'] > 0 else 0, axis=1)
         df_wh.to_excel(writer, sheet_name='warehouse', index=False)
 
