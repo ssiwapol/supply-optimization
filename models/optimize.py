@@ -372,7 +372,6 @@ class Optimize:
         sheet_status = mod.read_dict_from_worksheet(p.loadfile(p.config['file']['input']), 'status', self.stream)
         sheet_status.update(opt_status)
         sheet_status['output_datetime'] = datetime.datetime.now(timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M:%S")
-        mod.write_dict_to_worksheet(sheet_status, 'status', writer.book)
 
         # transportation
         df_trans = self.df_dict['output_combine'].copy()
@@ -380,11 +379,9 @@ class Optimize:
         df_trans['trans_rev'] = df_trans['vol'] * df_trans['sell_price']
         df_trans['trans_vc'] = df_trans['vol'] * (df_trans['var_cost'] + df_trans['trans_cost'])
         df_trans['trans_netcon'] = df_trans['trans_rev'] - df_trans['trans_vc']
-        df_trans = df_trans[['supply', 'supply_name', 'supply_lat', 'supply_long',
-                             'prod', 'prod_name', 'route', 'route_name', 'wh', 'wh_name',
-                             'dest', 'dest_name', 'dest_lat', 'dest_long',
+        df_trans = df_trans[['supply', 'supply_name', 'prod', 'prod_name', 'route', 'route_name', 
+                             'wh', 'wh_name', 'dest', 'dest_name',
                              'trans_vol', 'trans_rev', 'trans_vc', 'trans_netcon']]
-        df_trans.to_excel(writer, sheet_name='trans', index=False)
 
         # supply
         a = self.df_dict['supply']
@@ -401,7 +398,6 @@ class Optimize:
         df_supply['supply_utilize'] = df_supply['supply_utilize'].fillna(0)
         df_supply['supply_netconperunit'] = df_supply['supply_netcon'] / df_supply['supply_vol']
         df_supply['supply_netconperunit'] = df_supply['supply_netconperunit'].fillna(0)
-        df_supply.to_excel(writer, sheet_name='supply', index=False)
 
         # warehouse
         a = self.df_dict['warehouse']
@@ -412,7 +408,6 @@ class Optimize:
         df_wh['wh_vol'] = df_wh['vol'].fillna(0)
         df_wh = df_wh.groupby(['wh', 'wh_name', 'wh_fc', 'wh_min_vol', 'wh_max_vol'], as_index=False).agg({'wh_vol': 'sum'})
         df_wh['wh_fc_val'] = df_wh.apply(lambda x: x['wh_fc'] if x['wh_vol'] > 0 else 0, axis=1)
-        df_wh.to_excel(writer, sheet_name='warehouse', index=False)
 
         # destination
         a = self.df_dict['destination']
@@ -423,6 +418,23 @@ class Optimize:
         df_dest = pd.merge(df_dest, c, on='dest', how='left')
         df_dest['dest_vol'] = df_dest['vol'].fillna(0)
         df_dest = df_dest.groupby(['dest', 'dest_name', 'demand_vol'], as_index=False).agg({'dest_vol': 'sum'})
+
+        # total net contribution
+        total_rev = np.sum(df_trans['trans_rev'])
+        total_fc = np.sum(df_wh['wh_fc_val'])
+        total_vc = np.sum(df_trans['trans_vc'])
+        total_netcon = total_rev - (total_fc + total_vc)
+        sum_netcon = {'Net Contribution': total_netcon,
+                      'Revenue': total_rev,
+                      'Variable Cost': total_vc,
+                      'Fixed Cost': total_fc}
+
+        # write sheet
+        mod.write_dict_to_worksheet(sheet_status, 'status', writer.book)
+        mod.write_dict_to_worksheet(sum_netcon, 'summary', writer.book)
+        df_trans.to_excel(writer, sheet_name='trans', index=False)
+        df_supply.to_excel(writer, sheet_name='supply', index=False)
+        df_wh.to_excel(writer, sheet_name='warehouse', index=False)
         df_dest.to_excel(writer, sheet_name='destination', index=False)
 
         writer.save()
