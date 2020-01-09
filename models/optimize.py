@@ -380,7 +380,8 @@ class Optimize:
         df_trans['trans_vc'] = df_trans['vol'] * (df_trans['var_cost'] + df_trans['trans_cost'])
         df_trans['trans_netcon'] = df_trans['trans_rev'] - df_trans['trans_vc']
         df_trans = df_trans[['supply', 'supply_name', 'prod', 'prod_name', 'route', 'route_name', 
-                             'wh', 'wh_name', 'dest', 'dest_name',
+                             'wh', 'wh_name', 'dest', 'dest_name', 
+                             'sell_price', 'var_cost', 'trans_cost',
                              'trans_vol', 'trans_rev', 'trans_vc', 'trans_netcon']]
 
         # supply
